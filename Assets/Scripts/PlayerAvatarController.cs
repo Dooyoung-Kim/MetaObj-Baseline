@@ -1,54 +1,77 @@
 using FishNet.Object;
 using UnityEngine;
+using System.Collections;
+using Microsoft.MixedReality.Toolkit;
+using Microsoft.MixedReality.Toolkit.Utilities;
 
 public class PlayerAvatarController : NetworkBehaviour
 {
     private Transform mrtkCameraTransform;
+    private bool isInitialized = false;
 
     public override void OnStartClient()
     {
         base.OnStartClient();
+        Debug.Log($"[OnStartClient] Player avatar created for client {Owner.ClientId}. IsOwner: {IsOwner}");
 
-        // If this avatar is mine (the local player), find the main camera.
         if (base.IsOwner)
         {
-            mrtkCameraTransform = Camera.main.transform;
+            StartCoroutine(FindCameraCoroutine());
         }
+        else
+        {
+            var renderer = GetComponentInChildren<Renderer>();
+            if (renderer != null)
+            {
+                Debug.Log($"[OnStartClient] Remote player ({Owner.ClientId}) avatar's Renderer.enabled state: {renderer.enabled}");
+            }
+        }
+    }
+
+    private IEnumerator FindCameraCoroutine()
+    {
+        while (CameraCache.Main == null)
+        {
+            Debug.LogWarning("[FindCamera] Waiting for MRTK CameraCache...");
+            yield return new WaitForSeconds(0.5f);
+        }
+
+        mrtkCameraTransform = CameraCache.Main.transform;
+        isInitialized = true;
+        Debug.Log($"[FindCamera] Success: Found camera via CameraCache! Position: {mrtkCameraTransform.position}");
     }
 
     void Update()
     {
-        // Only process for the local player.
-        if (base.IsOwner && mrtkCameraTransform != null)
+        if (base.IsOwner && isInitialized)
         {
-            // 1. Update your own avatar's position to match the camera.
-            //    This makes the local avatar move with keyboard input in the editor.
-            this.transform.position = mrtkCameraTransform.position;
-            this.transform.rotation = mrtkCameraTransform.rotation;
+            // This log can be spammy, uncomment only when needed.
+            // Debug.Log("[Update] Sending transform data...");
 
-            // 2. Send the updated transform to the server to sync with others.
-            SyncTransformServerRpc(mrtkCameraTransform.position, mrtkCameraTransform.rotation);
+            transform.position = mrtkCameraTransform.position;
+            transform.rotation = mrtkCameraTransform.rotation;
+
+            SyncTransformServerRpc(transform.position, transform.rotation);
         }
     }
 
-    // [Local Player -> Server] Send my transform values.
     [ServerRpc]
     private void SyncTransformServerRpc(Vector3 position, Quaternion rotation)
     {
-        // The server relays the received values to all other clients.
+        // This log can be spammy, uncomment only when needed.
+        // Debug.Log($"[ServerRpc] Received transform from {Owner.ClientId}: {position}");
         BroadcastTransformObserversRpc(position, rotation);
     }
 
-    // [Server -> All Clients] Update the avatar's transform.
     [ObserversRpc(BufferLast = true)]
     private void BroadcastTransformObserversRpc(Vector3 position, Quaternion rotation)
     {
-        // Don't update my own avatar via the network since I'm controlling it directly.
-        // Only update the avatars of other players.
         if (!base.IsOwner)
         {
             transform.position = position;
             transform.rotation = rotation;
+            // This log can be spammy, uncomment only when needed.
+            // Debug.Log($"[ObserversRpc] Updating remote player ({Owner.ClientId}) avatar's transform: {position}");
         }
     }
 }
