@@ -1,28 +1,33 @@
 using FishNet.Object;
 using UnityEngine;
-using System.Collections.Generic; // List 사용을 위해 추가
+using System.Collections; // 코루틴 사용을 위해 추가
+using System.Collections.Generic;
 
 public class InitialObjectSpawner : NetworkBehaviour
 {
-    // Inspector 창에서 스폰할 프리팹들을 여기에 연결합니다.
     [SerializeField]
     private List<GameObject> objectsToSpawn;
 
-    // 서버가 완전히 시작되었을 때 자동으로 호출됩니다.
     public override void OnStartServer()
     {
         base.OnStartServer();
+        // 바로 스폰하지 않고, 딜레이를 주는 코루틴을 실행합니다.
+        StartCoroutine(SpawnObjectsAfterDelay());
+    }
+
+    private IEnumerator SpawnObjectsAfterDelay()
+    {
+        // 네트워크 상태가 안정화될 시간을 벌기 위해 아주 잠깐 기다립니다.
+        yield return new WaitForSeconds(3.0f);
+
+        Debug.Log("Waited for 3.0s, now spawning objects.");
 
         foreach (GameObject prefab in objectsToSpawn)
         {
             if (prefab != null)
             {
-                // 1. 프리팹을 씬에 생성합니다.
                 GameObject spawnedObject = Instantiate(prefab, prefab.transform.position, prefab.transform.rotation);
-
-                // 2. 생성된 객체를 네트워크에 스폰시켜 모든 클라이언트에게 즉시 보이게 합니다.
                 base.ServerManager.Spawn(spawnedObject);
-
                 Debug.Log(prefab.name + " has been spawned by the server.");
             }
         }
