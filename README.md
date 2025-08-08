@@ -42,14 +42,16 @@ To get started with this project, please follow these steps:
 
 This project uses a hierarchical **Scene Graph** to represent the structure of the Saturn V rocket.
 
-  node_1 (Spaceship_SaturnV_SceneGraph)
-  ├── node_2 ("1")
-  │ ├── node_3 (S-IC_00)
-  │ └── node_4 (S-IC_01)
-  ├── node_5 ("2")
-  │ ├── node_6 (S-IC_02_Tank)
-  │ └── node_7 (S-IC_05_Tank)
-  └── ...
+```
+node_1 (Spaceship_SaturnV_SceneGraph)
+├── node_2 ("1")
+│   ├── node_3 (S-IC_00)
+│   └── node_4 (S-IC_01)
+├── node_5 ("2")
+│   ├── node_6 (S-IC_02_Tank)
+│   └── node_7 (S-IC_05_Tank)
+└── ...
+```
   
 - **Nodes** (`"nodes"`):
   Each node represents a 3D component and contains:
